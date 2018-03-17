@@ -63,7 +63,7 @@ namespace GPWAca
                     i++;
                 }
             }
-            Console.WriteLine($"Saved {batches.Count} batches.");
+            Console.WriteLine($"Created {batches.Count} batch files.");
 
             Console.WriteLine("Crawler finished. Run \"POST.sh\" to post json files.");
 
@@ -159,7 +159,7 @@ namespace GPWAca
         /// <returns></returns>
         private static Announcement GetAnnouncement(string url)
         {
-            Console.WriteLine($"Fetching data for url: {url}");
+            Console.WriteLine($"Processing url: {url}");
             htmlWeb.OverrideEncoding = Encoding.UTF8;
             var doc = new HtmlDocument();
             try
