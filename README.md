@@ -1,2 +1,2 @@
 # GWPAnnouncements
-Crawler for polish stock market announcements. Simple console app written using .NET Core
+Crawler and indexer for polish stock market announcements. .NET Core console app.
