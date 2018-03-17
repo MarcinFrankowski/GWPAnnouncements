@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Newtonsoft;
 using Newtonsoft.Json;
 using System.IO;
-using SolrNet;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -16,6 +15,10 @@ namespace GPWAca
 {
     class Program
     {
+
+        private static readonly HttpClient client = new HttpClient();
+        private static HtmlWeb htmlWeb = new HtmlWeb();
+
         static void Main(string[] args)
         {
             string uri = "http://150.254.78.133:8983/solr/isi/update/json/docs?commit=true";
@@ -29,18 +32,16 @@ namespace GPWAca
             int offset = 0;
             while (true)
             {
-                batches.Add(result.Skip(offset).Take(5).ToList());
+                batches.Add(result.Skip(offset).Take(1000).ToList());
 
-                offset += 5;
-                maxNum -= 5;
+                offset += 1000;
+                maxNum -= 1000;
                 if (maxNum<=0)
                 {
                     break;
                 }
             }
 
-
-            //create post.sh
             string postFilePath = Path.Combine(System.Environment.CurrentDirectory, $"POST.sh");
             System.IO.File.WriteAllText(postFilePath, "");
             using (StreamWriter sw = File.AppendText(postFilePath))
@@ -54,45 +55,37 @@ namespace GPWAca
                     json = JsonConvert.SerializeObject(batch);
                     jsonPath = Path.Combine(System.Environment.CurrentDirectory, $"json_{i}.json");
                     System.IO.File.WriteAllText(jsonPath, json);
-                    //update post.sh
+
+                    
                     sw.WriteLine($"curl '{uri}' --data-binary @{jsonPath} -H 'Content-type:application/json'");
                     sw.WriteLine("");
 
                     i++;
                 }
             }
-            Console.WriteLine($"Saved {batches.Count} documents.");
+            Console.WriteLine($"Saved {batches.Count} batches.");
 
-            Console.WriteLine("Crawler done.");
+            Console.WriteLine("Crawler finished. Run \"POST.sh\" to post json files.");
 
-        
-            //var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            //var response = client.PostAsync("http://150.254.78.133:8983/solr/isi/update/json/docs?commit=true", content).Result;
-
-
-            Console.WriteLine("Press any key to proceed...");
+            Console.WriteLine("Press any key to close...");
             Console.ReadKey();
         }
 
-        private static readonly HttpClient client = new HttpClient();
-        private static HtmlWeb htmlWeb = new HtmlWeb();
 
         public static async Task<List<Announcement>> GetAsync()
         {
 
             var announcements = new List<Announcement>();
 
-            int limit = 5000;
+            int limit = 1000;
             int offset = 0;
             List<string> links = new List<string>();
             List<string> newLinks = new List<string>();
 
-            //Console.WriteLine($"Limit: {limit}");
             while (true)
             {
-                //Console.WriteLine($"Offset: {offset}");
                 newLinks = await GetLinksAsync(offset, limit);
-                if (/*links.Count>1 ||*/ newLinks.Count == 0)
+                if (/*links.Count>3 ||*/ newLinks.Count == 0)
                 {
                     break;
                 }
@@ -101,7 +94,7 @@ namespace GPWAca
                 offset += limit;
             }
 
-            links = links.Take(20).ToList();
+            //links = links.Take(10).ToList();
             Parallel.ForEach(links, link => announcements.Add(GetAnnouncement(link)));
 
             return announcements;
@@ -201,6 +194,7 @@ namespace GPWAca
                     .Replace("\t", "")
                     .Replace("\n", "")
                     .Replace("\r", "")
+                    .Replace("  "," ")
                     .Replace(" ","T")+":00Z";
                 date = date.Substring(6, 4) + "-" + date.Substring(3, 2) + "-" + date.Substring(0, 2) + date.Substring(10);
             }
