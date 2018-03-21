@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Globalization;
 
 namespace GPWAca
 {
@@ -32,17 +33,17 @@ namespace GPWAca
             int offset = 0;
             while (true)
             {
-                batches.Add(result.Skip(offset).Take(1000).ToList());
+                batches.Add(result.Skip(offset).Take(100).ToList());
 
-                offset += 1000;
-                maxNum -= 1000;
+                offset += 100;
+                maxNum -= 100;
                 if (maxNum<=0)
                 {
                     break;
                 }
             }
 
-            string postFilePath = Path.Combine(System.Environment.CurrentDirectory, $"POST.sh");
+            string postFilePath = Path.Combine(System.Environment.CurrentDirectory, $"POST.bat");
             System.IO.File.WriteAllText(postFilePath, "");
             using (StreamWriter sw = File.AppendText(postFilePath))
             {
@@ -57,11 +58,13 @@ namespace GPWAca
                     System.IO.File.WriteAllText(jsonPath, json);
 
                     
-                    sw.WriteLine($"curl '{uri}' --data-binary @{jsonPath} -H 'Content-type:application/json'");
+                    sw.WriteLine($"curl {uri} -X POST --data-binary @{jsonPath} -H \"Content-type:application/json\"");
                     sw.WriteLine("");
 
                     i++;
                 }
+                sw.WriteLine($"pause");
+
             }
             Console.WriteLine($"Created {batches.Count} batch files.");
 
@@ -85,7 +88,7 @@ namespace GPWAca
             while (true)
             {
                 newLinks = await GetLinksAsync(offset, limit);
-                if (/*links.Count>3 ||*/ newLinks.Count == 0)
+                if (links.Count>1000 || newLinks.Count == 0)
                 {
                     break;
                 }
@@ -94,8 +97,15 @@ namespace GPWAca
                 offset += limit;
             }
 
-            //links = links.Take(10).ToList();
-            Parallel.ForEach(links, link => announcements.Add(GetAnnouncement(link)));
+            links = links.Take(1000).ToList();
+            Parallel.ForEach(links, link =>
+            {
+                var ann = GetAnnouncement(link);
+                if (!string.IsNullOrEmpty(ann.content))
+                {
+                    announcements.Add(ann);
+                }
+            });
 
             return announcements;
         }
@@ -172,7 +182,7 @@ namespace GPWAca
             }
 
             string title = "-";
-            string date = "0000-00-00T00:00:00Z";
+            string date = DateTime.Now.ToString("yyyy-MM-ddThh:mm:ssZ");
             string content = "-";
             string id = "434589"+url.Substring(url.IndexOf("id=")+3);
             try
@@ -193,9 +203,8 @@ namespace GPWAca
                     .InnerText
                     .Replace("\t", "")
                     .Replace("\n", "")
-                    .Replace("\r", "")
-                    .Replace("  "," ")
-                    .Replace(" ","T")+":00Z";
+                    .Replace("\r", "").Trim();
+                date = DateTime.ParseExact(date,"dd-MM-yyyyhh:mm",CultureInfo.InvariantCulture).ToString("yyyy-MM-ddThh:mm:ssZ");
                 date = date.Substring(6, 4) + "-" + date.Substring(3, 2) + "-" + date.Substring(0, 2) + date.Substring(10);
             }
             catch
@@ -205,17 +214,17 @@ namespace GPWAca
             {
                 content = doc.DocumentNode.SelectNodes("/html/body/section[2]/div[2]/div/div")[0]
                     .InnerText
-                    .Replace("\t", "")
-                    .Replace("\n", "")
-                    .Replace("\r", "").Replace("\"", "''")
+                    //.Replace("\t", "")
+                    //.Replace("\n", "")
+                    //.Replace("\r", "").Replace("\"", "''")
                     .Replace("&oacute;","ó");
                 var innerContent = doc.DocumentNode.SelectNodes("/html/body/section[2]/div[2]/div/div");
                 foreach (var p in innerContent[0].ChildNodes.Where(cn => cn.Name == "p"))
                 {
                     content += p.InnerText
-                        .Replace("\t", "")
-                        .Replace("\n", "")
-                        .Replace("\r", "").Replace("\"", "''")
+                        //.Replace("\t", "")
+                        //.Replace("\n", "")
+                        //.Replace("\r", "").Replace("\"", "''")
                         .Replace("&oacute;", "ó");
                 }
             }
