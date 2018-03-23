@@ -33,10 +33,10 @@ namespace GPWAca
             int offset = 0;
             while (true)
             {
-                batches.Add(result.Skip(offset).Take(100).ToList());
+                batches.Add(result.Skip(offset).Take(1000).ToList());
 
-                offset += 100;
-                maxNum -= 100;
+                offset += 1000;
+                maxNum -= 1000;
                 if (maxNum<=0)
                 {
                     break;
@@ -80,7 +80,7 @@ namespace GPWAca
 
             var announcements = new List<Announcement>();
 
-            int limit = 1000;
+            int limit = 5000;
             int offset = 0;
             List<string> links = new List<string>();
             List<string> newLinks = new List<string>();
@@ -88,7 +88,7 @@ namespace GPWAca
             while (true)
             {
                 newLinks = await GetLinksAsync(offset, limit);
-                if (links.Count>1000 || newLinks.Count == 0)
+                if (/*links.Count>1000 || */newLinks.Count == 0)
                 {
                     break;
                 }
@@ -97,11 +97,12 @@ namespace GPWAca
                 offset += limit;
             }
 
-            links = links.Take(1000).ToList();
+            //links = links.Take(1000).ToList();
+
             Parallel.ForEach(links, link =>
             {
                 var ann = GetAnnouncement(link);
-                if (!string.IsNullOrEmpty(ann.content))
+                if (!string.IsNullOrEmpty(ann.content) && !ann.content.Equals("-"))
                 {
                     announcements.Add(ann);
                 }
@@ -203,12 +204,13 @@ namespace GPWAca
                     .InnerText
                     .Replace("\t", "")
                     .Replace("\n", "")
-                    .Replace("\r", "").Trim();
+                    .Replace("\r", "").Replace(" ","").Trim();
                 date = DateTime.ParseExact(date,"dd-MM-yyyyhh:mm",CultureInfo.InvariantCulture).ToString("yyyy-MM-ddThh:mm:ssZ");
                 date = date.Substring(6, 4) + "-" + date.Substring(3, 2) + "-" + date.Substring(0, 2) + date.Substring(10);
             }
             catch
             {
+                return new Announcement();
             }
             try
             {
